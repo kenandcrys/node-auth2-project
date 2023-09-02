@@ -51,7 +51,7 @@ function findById(user_id) {
     return db('users as U')
           .join('roles as R')
           .select('U.user_id', 'U.username', 'R.role_name')
-          .where('user_id', user_id)
+          .where('U.user_id', user_id)
   /**
     You will need to join two tables.
     Resolves to the user with the given user_id.
