@@ -27,7 +27,7 @@ function find() {
 function findBy(filter) {
 
   return db('user as U')
-          .leftjoin('roles as R', 'U.role_id', 'R.role_id')
+          .join('roles as R', 'U.role_id', 'R.role_id')
           .select('U.user_id', 'U.username', 'U.password', 'R.role_name')
           .where(filter);
 
