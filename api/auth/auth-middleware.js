@@ -1,72 +1,91 @@
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 
+const jwt = require("jsonwebtoken");
+
 const restricted = (req, res, next) => {
-  next()
-  /*
-    If the user does not provide a token in the Authorization header:
-    status 401
-    {
-      "message": "Token required"
+  // Check if a token is provided in the Authorization header
+  const token = req.headers.authorization;
+
+  if (!token) {
+    // If no token is provided, return a 401 response
+    return res.status(401).json({
+      message: "Token required"
+    });
+  }
+
+  // Verify the provided token using the JWT_SECRET
+  jwt.verify(token, JWT_SECRET, (err, decodedToken) => {
+    if (err) {
+      // If the token is invalid, return a 401 response
+      return res.status(401).json({
+        message: "Token invalid"
+      });
     }
 
-    If the provided token does not verify:
-    status 401
-    {
-      "message": "Token invalid"
-    }
+    // If the token is valid, store the decoded token in the req object for downstream middlewares
+    req.decodedToken = decodedToken;
+    next();
+  });
+};
+const only = (role_name) => (req, res, next) => {
+  // Check if a decoded token exists in the req object
+  const decodedToken = req.decodedToken;
 
-    Put the decoded token in the req object, to make life easier for middlewares downstream!
-  */
-}
+  if (!decodedToken || decodedToken.role_name !== role_name) {
+    // If no decoded token exists or the role_name doesn't match, return a 403 response
+    return res.status(403).json({
+      message: "This is not for you"
+    });
+  }
 
-const only = role_name => (req, res, next) => {
-  next()
-  /*
-    If the user does not provide a token in the Authorization header with a role_name
-    inside its payload matching the role_name passed to this function as its argument:
-    status 403
-    {
-      "message": "This is not for you"
-    }
-
-    Pull the decoded token from the req object, to avoid verifying it again!
-  */
-}
+  // If the role_name matches, allow the request to proceed
+  next();
+};
 
 
 const checkUsernameExists = (req, res, next) => {
-  next()
-  /*
-    If the username in req.body does NOT exist in the database
-    status 401
-    {
-      "message": "Invalid credentials"
-    }
-  */
-}
+  // You will need to implement the logic to check if the username exists in the database.
+  // Assuming you have a function called "usernameExistsInDatabase" for this purpose.
+
+  // Example:
+  const usernameExists = usernameExistsInDatabase(req.body.username);
+
+  if (!usernameExists) {
+    // If the username doesn't exist in the database, return a 401 response
+    return res.status(401).json({
+      message: "Invalid credentials"
+    });
+  }
+
+  // If the username exists in the database, allow the request to proceed
+  next();
+};
 
 
 const validateRoleName = (req, res, next) => {
-  next()
-  /*
-    If the role_name in the body is valid, set req.role_name to be the trimmed string and proceed.
+  const role_name = req.body.role_name;
 
-    If role_name is missing from req.body, or if after trimming it is just an empty string,
-    set req.role_name to be 'student' and allow the request to proceed.
+  if (!role_name || !role_name.trim()) {
+    // If role_name is missing or an empty string, set it to 'student'
+    req.role_name = 'student';
+    next(); // Proceed to the next middleware
+  } else if (role_name.trim() === 'admin') {
+    // If role_name is 'admin', return a 422 response
+    res.status(422).json({
+      message: 'Role name can not be admin'
+    });
+  } else if (role_name.trim().length > 32) {
+    // If role_name is longer than 32 characters, return a 422 response
+    res.status(422).json({
+      message: 'Role name can not be longer than 32 chars'
+    });
+  } else {
+    // If role_name is valid, set req.role_name to the trimmed string and proceed
+    req.role_name = role_name.trim();
+    next();
+  }
+};
 
-    If role_name is 'admin' after trimming the string:
-    status 422
-    {
-      "message": "Role name can not be admin"
-    }
-
-    If role_name is over 32 characters after trimming the string:
-    status 422
-    {
-      "message": "Role name can not be longer than 32 chars"
-    }
-  */
-}
 
 module.exports = {
   restricted,
